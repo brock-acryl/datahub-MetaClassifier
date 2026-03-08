@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MetaClassifier Control Interface</title>
+    <style>
+      :root {
+        --bg: #f7f4ee;
+        --card: #ffffff;
+        --ink: #1f2933;
+        --accent: #0e7490;
+        --warn: #b45309;
+      }
+      body {
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        margin: 0;
+        color: var(--ink);
+        background: radial-gradient(circle at top left, #dff5f9, var(--bg) 45%);
+      }
+      header {
+        padding: 24px;
+        background: linear-gradient(90deg, #0e7490, #15803d);
+        color: white;
+      }
+      main {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        padding: 16px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 12px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+      }
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+      }
+      pre {
+        white-space: pre-wrap;
+        font-size: 12px;
+      }
+      .warn {
+        color: var(--warn);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>MetaClassifier Control Interface</h1>
+      <p>Manage knowledge sync, proposal reviews, feedback, and platform metrics.</p>
+    </header>
+    <main>
+      <section class="card">
+        <h2>Metrics</h2>
+        <button onclick="loadMetrics()">Refresh</button>
+        <pre id="metrics"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Pending Proposals</h2>
+        <button onclick="loadProposals()">Load</button>
+        <pre id="proposals"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Knowledge Sync</h2>
+        <button onclick="runSync()">Run Sync</button>
+        <pre id="sync"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Taxonomy Queue</h2>
+        <p class="warn">Unknown concepts are queued for human creation.</p>
+        <button onclick="loadTaxonomy()">Load Queue</button>
+        <pre id="taxonomy"></pre>
+      </section>
+    </main>
+
+    <script>
+      async function loadMetrics() {
+        const data = await fetch('/metrics/classification-overview').then((r) => r.json());
+        document.getElementById('metrics').textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function loadProposals() {
+        const data = await fetch('/proposals?status=pending_review').then((r) => r.json());
+        document.getElementById('proposals').textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function runSync() {
+        const data = await fetch('/config/knowledge-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source: 'datahub', full_refresh: false }),
+        }).then((r) => r.json());
+        document.getElementById('sync').textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function loadTaxonomy() {
+        const data = await fetch('/taxonomy/proposals').then((r) => r.json());
+        document.getElementById('taxonomy').textContent = JSON.stringify(data, null, 2);
+      }
+
+      loadMetrics();
+    </script>
+  </body>
+</html>

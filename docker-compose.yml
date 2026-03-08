@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: metaclassifier
+      POSTGRES_PASSWORD: metaclassifier
+      POSTGRES_DB: metaclassifier
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metaclassifier"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  event-ingestion:
+    build: .
+    command: uvicorn services.event_ingestion_service.app.main:app --host 0.0.0.0 --port 8001
+    environment:
+      DATABASE_URL: postgresql+psycopg2://metaclassifier:metaclassifier@postgres:5432/metaclassifier
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+
+  classification:
+    build: .
+    command: uvicorn services.classification_service.app.main:app --host 0.0.0.0 --port 8002
+    environment:
+      DATABASE_URL: postgresql+psycopg2://metaclassifier:metaclassifier@postgres:5432/metaclassifier
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+
+  workflow:
+    build: .
+    command: uvicorn services.workflow_service.app.main:app --host 0.0.0.0 --port 8003
+    environment:
+      DATABASE_URL: postgresql+psycopg2://metaclassifier:metaclassifier@postgres:5432/metaclassifier
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8003:8003"
+
+  writeback:
+    build: .
+    command: uvicorn services.writeback_service.app.main:app --host 0.0.0.0 --port 8004
+    environment:
+      DATABASE_URL: postgresql+psycopg2://metaclassifier:metaclassifier@postgres:5432/metaclassifier
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8004:8004"
+
+  feedback:
+    build: .
+    command: uvicorn services.feedback_service.app.main:app --host 0.0.0.0 --port 8005
+    environment:
+      DATABASE_URL: postgresql+psycopg2://metaclassifier:metaclassifier@postgres:5432/metaclassifier
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8005:8005"
+
+  control-api:
+    build: .
+    command: uvicorn services.control_api.app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: postgresql+psycopg2://metaclassifier:metaclassifier@postgres:5432/metaclassifier
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
