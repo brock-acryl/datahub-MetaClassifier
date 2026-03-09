@@ -9,12 +9,25 @@ from services.shared.schemas import (
 )
 
 
+def extract_change_type(payload: dict[str, Any]) -> str:
+    return str(payload.get("changeType") or payload.get("event", {}).get("changeType") or "schemaFieldAdd").lower()
+
+
+def is_supported_datahub_event(payload: dict[str, Any]) -> bool:
+    change_type = extract_change_type(payload)
+    if change_type in {"create", "datasetcreated"}:
+        return True
+    if "schema" in change_type:
+        return True
+    if "tag" in change_type:
+        return True
+    return False
+
+
 def normalize_datahub_event(payload: dict[str, Any]) -> EventIn:
     event_id = str(payload.get("event", {}).get("id") or payload.get("id") or "")
     urn = str(payload.get("entityUrn") or payload.get("event", {}).get("entityUrn") or payload.get("urn") or "")
-    change_type = str(
-        payload.get("changeType") or payload.get("event", {}).get("changeType") or "schemaFieldAdd"
-    ).lower()
+    change_type = extract_change_type(payload)
 
     if change_type in {"create", "datasetcreated"}:
         event_type = EventType.DATASET_CREATED

@@ -11,6 +11,18 @@ class EventType(str, Enum):
     TAG_CHANGED = "tag_changed"
 
 
+class IngestionStatus(str, Enum):
+    STORED = "stored"
+    DUPLICATE_IGNORED = "duplicate_ignored"
+    IGNORED_EVENT_TYPE = "ignored_event_type"
+
+
+class ClassificationTriggerStatus(str, Enum):
+    TRIGGERED = "triggered"
+    TRIGGER_FAILED = "trigger_failed"
+    NOT_ATTEMPTED = "not_attempted"
+
+
 class ProposalStatus(str, Enum):
     PENDING_REVIEW = "pending_review"
     APPROVED = "approved"
@@ -46,6 +58,13 @@ class ClassificationResult(BaseModel):
     knowledge_snapshot: KnowledgeSnapshot
     proposal: ClassificationProposal
     model_metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class IngestionResult(BaseModel):
+    event: EventIn
+    ingestion_status: IngestionStatus
+    classification_trigger_status: ClassificationTriggerStatus
+    classification_error: str | None = None
 
 
 class ApprovalDecision(BaseModel):

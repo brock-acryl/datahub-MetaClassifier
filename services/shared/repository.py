@@ -33,6 +33,10 @@ def log_event(db: Session, event: EventIn) -> EventModel:
     return model
 
 
+def get_event_by_event_id(db: Session, event_id: str) -> EventModel | None:
+    return db.scalar(select(EventModel).where(EventModel.event_id == event_id))
+
+
 def update_event_knowledge(db: Session, event_id: str, knowledge_snapshot: dict[str, Any]) -> None:
     item = db.scalar(select(EventModel).where(EventModel.event_id == event_id))
     if item:
