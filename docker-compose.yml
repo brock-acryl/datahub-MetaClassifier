@@ -23,6 +23,11 @@ services:
         condition: service_healthy
     ports:
       - "8001:8001"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   classification:
     build: .
@@ -78,3 +83,16 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+
+  actions-runner:
+    build: .
+    command: datahub actions -c /app/config/actions.yaml
+    environment:
+      DATAHUB_GMS_URL: ${DATAHUB_GMS_URL:-http://datahub-gms:8080}
+      DATAHUB_GMS_TOKEN: ${DATAHUB_GMS_TOKEN:-}
+      EVENT_INGESTION_URL: http://event-ingestion:8001/ingest
+    volumes:
+      - ./config/actions.yaml:/app/config/actions.yaml:ro
+    depends_on:
+      event-ingestion:
+        condition: service_healthy

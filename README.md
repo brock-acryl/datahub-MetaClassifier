@@ -4,7 +4,8 @@ MetaClassifier is an event-driven metadata intelligence pipeline that listens to
 
 ## Architecture (v1)
 
-- `event-ingestion-service`: DataHub Action ingress and event normalization.
+- `actions-runner`: DataHub Actions runtime that listens to DataHub and invokes the custom MetaClassifier action.
+- `event-ingestion-service`: internal ingress endpoint for action handoff and event normalization.
 - `classification-service`: domain-knowledge resolution + pluggable provider classification (OpenAI default adapter).
 - `workflow-service`: approval/rejection state transitions.
 - `writeback-service`: approved metadata writeback payload generation (tags, glossary terms, domain).
@@ -39,10 +40,21 @@ Services:
 - `workflow`: `http://localhost:8003`
 - `writeback`: `http://localhost:8004`
 - `feedback`: `http://localhost:8005`
+- `actions-runner`: DataHub Actions listener process (no HTTP port)
 
-## DataHub Action integration scaffold
+## DataHub Action integration
 
-`services/event_ingestion_service/app/datahub_action.py` contains a plugin scaffold that forwards DataHub Action events to the ingestion endpoint.
+MetaClassifier now uses a real DataHub Actions runner via `docker compose`:
+
+- Runner command: `datahub actions -c /app/config/actions.yaml`
+- Actions config: `config/actions.yaml`
+- Custom action class: `services/event_ingestion_service/app/datahub_action.py`
+- Handoff target: `http://event-ingestion:8001/ingest`
+
+Required runtime env vars:
+
+- `DATAHUB_GMS_URL` (for example `http://datahub-gms:8080`)
+- `DATAHUB_GMS_TOKEN` (optional)
 
 ## OpenAI endpoint configuration
 
@@ -68,6 +80,33 @@ If the endpoint is unavailable or returns invalid output, the service falls back
 - `POST /feedback`
 - `GET /metrics/classification-overview`
 - `GET /taxonomy/proposals`
+
+### Event ingestion behavior
+
+`POST /ingest` is idempotent by `event_id` and now returns:
+
+- `event` (normalized event)
+- `ingestion_status`: `stored` | `duplicate_ignored` | `ignored_event_type`
+- `classification_trigger_status`: `triggered` | `trigger_failed` | `not_attempted`
+- `classification_error` (nullable)
+
+On classification trigger failure, ingestion returns HTTP `202` and still persists the event.
+
+### Verifying DataHub listening
+
+```bash
+docker compose up --build -d
+docker compose logs -f actions-runner event-ingestion
+```
+
+Action ingestion failures are visible in `actions-runner` logs and in MetaClassifier audit rows.
+
+`actions-runner` bind-mounts `config/actions.yaml`, so changes to action config do not require image rebuilds.  
+After editing the file, restart only the runner:
+
+```bash
+docker compose restart actions-runner
+```
 
 ## Quality gates
 
